@@ -1,30 +1,46 @@
 #!/bin/bash
-pwd=123456
-# if [ $# -eq 0 ]; then
-#     echo "No arguments provided."
-# else
-#     echo "Number of arguments: $#"
-#     echo "info: $1"
-#     pwd=$1
-# fi
 
-echo "root runner user password is:$pwd"
+# 启用严格模式和错误处理
+set -euo pipefail
 
+# 设置日志函数
+log() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a password-modify.log
+}
+
+# 从环境变量获取密码，如果未设置则使用默认值
+PASSWORD=${PASSWORD:-"123456"}
+
+log "开始修改root和runner用户密码..."
+
+# 修改runner用户密码
+log "修改runner用户密码..."
 expect -c "
     spawn sudo passwd runner
     expect {
-        \"password\" { send \"$pwd\r\";}
+        \"password\" { send \"$PASSWORD\r\";}
     }
     expect {
-        \"password\" { send \"$pwd\r\";}
+        \"password\" { send \"$PASSWORD\r\";}
     }
-expect eof"
+expect eof" || {
+    log "错误: 修改runner用户密码失败"
+    exit 1
+}
+
+# 修改root用户密码
+log "修改root用户密码..."
 expect -c "
     spawn sudo passwd root
     expect {
-        \"password\" { send \"$pwd\r\";}
+        \"password\" { send \"$PASSWORD\r\";}
     }
     expect {
-        \"password\" { send \"$pwd\r\";}
+        \"password\" { send \"$PASSWORD\r\";}
     }
-expect eof"
+expect eof" || {
+    log "错误: 修改root用户密码失败"
+    exit 1
+}
+
+log "密码修改完成，新密码已设置为: $PASSWORD"

@@ -2,19 +2,30 @@
 # ZeroTier Minimal Restore Script - 仅还原关键文件，使用固定文件名
 # Usage: ./zerotier-minimal-restore.sh [backup_file.tar.gz]
 
+# 启用严格模式和错误处理
+set -euo pipefail
+
+# 设置日志函数
+log() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a zerotier-restore.log
+}
+
 # 检查expect是否已安装
 if ! command -v expect &> /dev/null; then
-    echo "正在安装expect..."
+    log "正在安装expect..."
     sudo apt-get update
     sudo apt-get install -y expect
 fi
+
+# 从环境变量获取密码，如果未设置则使用默认值
+ROOT_PASSWORD=${ROOT_PASSWORD:-"123456"}
 
 # 使用指定的备份文件或默认名称
 BACKUP_FILE=${1:-"zerotier-backup.tar.gz"}
 
 # 检查备份文件是否存在
 if [ ! -f "$BACKUP_FILE" ]; then
-  echo "错误: 未找到备份文件: $BACKUP_FILE"
+  log "错误: 未找到备份文件: $BACKUP_FILE"
   exit 1
 fi
 
@@ -22,41 +33,54 @@ fi
 cat > restore_zerotier.sh << 'EOF'
 #!/bin/bash
 
+# 启用严格模式和错误处理
+set -euo pipefail
+
+# 设置日志函数
+log() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a zerotier-restore.log
+}
+
 # 使用指定的备份文件或默认名称
 BACKUP_FILE=${1:-"zerotier-backup.tar.gz"}
 
 # 检查备份文件是否存在
 if [ ! -f "$BACKUP_FILE" ]; then
-  echo "错误: 未找到备份文件: $BACKUP_FILE"
+  log "错误: 未找到备份文件: $BACKUP_FILE"
   exit 1
 fi
 
 # 创建临时解压目录
 TMP_DIR=$(mktemp -d)
+trap 'rm -rf "$TMP_DIR"' EXIT
 
 # 解压备份文件
-echo "解压备份文件..."
+log "解压备份文件..."
 tar -xzf "$BACKUP_FILE" -C "$TMP_DIR"
 
 # 检查必要文件是否存在
 if [ ! -f "$TMP_DIR/identity.secret" ] || [ ! -f "$TMP_DIR/identity.public" ]; then
-  echo "错误: 备份文件中缺少身份文件"
-  rm -rf "$TMP_DIR"
+  log "错误: 备份文件中缺少身份文件"
   exit 1
 fi
 
 # 安装ZeroTier（如果需要）
 if ! command -v zerotier-cli &> /dev/null; then
-  echo "未找到ZeroTier，正在安装..."
-  curl -s https://install.zerotier.com | bash
+  log "未找到ZeroTier，正在安装..."
+  curl -s https://install.zerotier.com | bash || {
+    log "错误: ZeroTier安装失败"
+    exit 1
+  }
 fi
 
 # 停止ZeroTier服务
-echo "停止ZeroTier服务..."
-systemctl stop zerotier-one
+log "停止ZeroTier服务..."
+systemctl stop zerotier-one || {
+  log "警告: 停止ZeroTier服务失败"
+}
 
 # 还原配置
-echo "还原ZeroTier配置..."
+log "还原ZeroTier配置..."
 mkdir -p /var/lib/zerotier-one/networks.d
 
 # 删除当前身份文件
@@ -66,27 +90,34 @@ rm -rf /var/lib/zerotier-one/networks.d/*
 # 从备份复制文件
 cp -f "$TMP_DIR"/identity.* /var/lib/zerotier-one/
 if [ -d "$TMP_DIR/networks.d" ]; then
-  cp -rf "$TMP_DIR"/networks.d/* /var/lib/zerotier-one/networks.d/ 2>/dev/null
+  cp -rf "$TMP_DIR"/networks.d/* /var/lib/zerotier-one/networks.d/ 2>/dev/null || true
 fi
 
 # 设置正确权限
-chown -R root:root /var/lib/zerotier-one
+chown root:root /var/lib/zerotier-one/identity.*
 chmod 600 /var/lib/zerotier-one/identity.secret
+chmod 644 /var/lib/zerotier-one/identity.public
 
 # 重启ZeroTier服务
-echo "启动ZeroTier服务..."
-systemctl start zerotier-one
+log "启动ZeroTier服务..."
+systemctl start zerotier-one || {
+  log "错误: 启动ZeroTier服务失败"
+  exit 1
+}
 sleep 2
 
+# 检查服务状态
+if ! systemctl is-active --quiet zerotier-one; then
+  log "错误: ZeroTier服务未能正常启动"
+  exit 1
+fi
+
 # 显示网络信息
-echo "还原后的网络信息:"
+log "还原后的网络信息:"
 zerotier-cli status
 zerotier-cli listnetworks
 
-# 清理
-rm -rf "$TMP_DIR"
-
-echo "ZeroTier配置还原成功！"
+log "ZeroTier配置还原成功！"
 EOF
 
 # 设置脚本可执行权限
@@ -101,7 +132,7 @@ set timeout 300
 # 使用su切换到root用户
 spawn su root -c "./restore_zerotier.sh $BACKUP_FILE"
 expect "Password:"
-send "123456\r"
+send "$ROOT_PASSWORD\r"
 expect eof
 EOF
 
