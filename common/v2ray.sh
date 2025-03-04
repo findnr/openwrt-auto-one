@@ -1,11 +1,14 @@
 #!/bin/bash
 
-# 启用严格模式和错误处理
-set -euo pipefail
-
 # 设置日志函数
 log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a v2ray-install.log
+}
+
+# 错误处理函数
+handle_error() {
+    log "错误: $1"
+    exit 1
 }
 
 # 检查expect是否已安装
@@ -25,9 +28,6 @@ UUID="3228ad31-eff6-4a21-99d3-065f7b677a53"
 cat > setup_v2ray.sh << EOF
 #!/bin/bash
 
-# 启用严格模式和错误处理
-set -euo pipefail
-
 # 启用IP转发
 log "配置IP转发..."
 echo 'net.ipv4.ip_forward = 1' >> /etc/sysctl.conf
@@ -35,10 +35,10 @@ sysctl -p
 
 # 安装V2Ray
 log "安装V2Ray..."
-curl -L https://raw.githubusercontent.com/v2fly/fhs-install-v2ray/master/install-release.sh | bash || {
-    log "错误: V2Ray安装失败"
-    exit 1
-}
+curl -L https://raw.githubusercontent.com/v2fly/fhs-install-v2ray/master/install-release.sh | bash
+if [ $? -ne 0 ]; then
+    handle_error "V2Ray安装失败"
+fi
 
 # 创建V2Ray配置文件
 log "创建V2Ray配置文件..."
@@ -76,23 +76,28 @@ sed -i "s/\\${UUID}/${UUID}/g" /usr/local/etc/v2ray/config.json
 # 设置iptables规则
 log "配置iptables规则..."
 INTERFACE=\$(ip route | grep default | awk '{print \$5}')
-iptables -t nat -A POSTROUTING -o \$INTERFACE -j MASQUERADE || {
-    log "错误: 设置iptables规则失败"
-    exit 1
-}
+if [ -z "\$INTERFACE" ]; then
+    handle_error "获取网络接口失败"
+fi
+
+iptables -t nat -A POSTROUTING -o \$INTERFACE -j MASQUERADE
+if [ $? -ne 0 ]; then
+    handle_error "设置iptables规则失败"
+fi
 
 # 安装iptables-persistent以保存规则
-apt-get install -y iptables-persistent || {
+apt-get install -y iptables-persistent
+if [ $? -ne 0 ]; then
     log "警告: 安装iptables-persistent失败"
-}
+fi
 
 # 启动V2Ray服务
 log "启动V2Ray服务..."
-systemctl enable v2ray
-systemctl restart v2ray || {
-    log "错误: 启动V2Ray服务失败"
-    exit 1
-}
+systemctl enable v2ray || handle_error "启用V2Ray服务失败"
+systemctl restart v2ray
+if [ $? -ne 0 ]; then
+    handle_error "启动V2Ray服务失败"
+fi
 
 # 检查服务状态
 if ! systemctl is-active --quiet v2ray; then

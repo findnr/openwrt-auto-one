@@ -1,8 +1,5 @@
 #!/bin/bash
 
-# 启用严格模式和错误处理
-set -euo pipefail
-
 # 设置日志函数
 log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a password-modify.log
