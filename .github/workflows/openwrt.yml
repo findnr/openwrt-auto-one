@@ -15,3 +15,6 @@ jobs:
       CYM_TOKEN: ${{ secrets.CYM_TOKEN }}
       SERVER_ADDR: ${{ secrets.SERVER_ADDR }}
       REMOTE_PORT: ${{ secrets.REMOTE_PORT }}
+      REMOTE_PORT_V2: ${{ secrets.REMOTE_PORT_V2 }}
+      LOCAL_PORT_O: ${{ secrets.LOCAL_PORT_O }}
+      LOCAL_PORT_N: ${{ secrets.LOCAL_PORT_N }}
