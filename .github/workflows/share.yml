@@ -56,7 +56,7 @@ jobs:
       - name: Modify frpc.toml
         run: |
           sed -i 's/serverAddr = "127.0.0.1"/${{ secrets.SERVER_ADDR }}/g' frpc.toml
-          sed -i 's/name = "testhttp"/name = "ubuntussh"/g' frpc.toml
+          sed -i 's/name = "testhttp"/name = "v2openwrt"/g' frpc.toml
           sed -i 's/remotePort = 6000/${{ secrets.REMOTE_PORT }}/g' frpc.toml
 
       - name: Run frpcc
