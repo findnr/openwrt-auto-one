@@ -17,6 +17,10 @@ on:
         required: false
       REMOTE_PORT_V2:
         required: false
+      LOCAL_PORT_N:
+        required: false
+      LOCAL_PORT_O:
+        required: false
 
 jobs:
   ubuntu-job:
