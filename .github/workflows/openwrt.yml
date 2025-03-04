@@ -14,4 +14,4 @@ jobs:
       # WX_UID: ${{ secrets.WX_UID }}
       CYM_TOKEN: ${{ secrets.CYM_TOKEN }}
       SERVER_ADDR: ${{ secrets.SERVER_ADDR }}
-      REMOTE_PORT: ${{ secrets.UBUNTU_REMOTE_PORT }}
+      REMOTE_PORT: ${{ secrets.REMOTE_PORT }}
