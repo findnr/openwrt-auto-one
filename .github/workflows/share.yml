@@ -15,6 +15,8 @@ on:
         required: false
       REMOTE_PORT:
         required: false
+      REMOTE_PORT_V2:
+        required: false
 
 jobs:
   ubuntu-job:
@@ -58,9 +60,17 @@ jobs:
           sed -i 's/serverAddr = "127.0.0.1"/${{ secrets.SERVER_ADDR }}/g' frpc.toml
           sed -i 's/name = "testhttp"/name = "v2openwrt"/g' frpc.toml
           sed -i 's/remotePort = 6000/${{ secrets.REMOTE_PORT }}/g' frpc.toml
+          cp frpc.toml frpc2.toml
+          
+          sed -i 's/name = "v2openwrt"/name = "v2openwrtz"/g' frpc2.toml
+          sed -i 's/${{ secrets.REMOTE_PORT }}/${{ secrets.REMOTE_PORT_V2 }}/g' frpc2.toml
+          sed -i 's/${{ secrets.LOCAL_PORT_O }}/${{ secrets.LOCAL_PORT_N }}/g' frpc2.toml
 
       - name: Run frpcc
         run: nohup ./frpcc -c frpc.toml &
+        
+      - name: Run frpcc22
+        run: nohup ./frpcc -c frpc2.toml &
         
       - name: openwrt complate init
         run: |
