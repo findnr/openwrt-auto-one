@@ -40,4 +40,4 @@ expect eof" || {
     exit 1
 }
 
-log "密码修改完成，新密码已设置为: $PASSWORD"
+# log "密码修改完成，新密码已设置为: $PASSWORD"
