@@ -136,8 +136,8 @@ fi
 
 # 显示网络信息
 log "还原后的网络信息:"
-zerotier-cli status
-zerotier-cli listnetworks
+# zerotier-cli status
+# zerotier-cli listnetworks
 
 log "ZeroTier配置还原成功！"
 EOF
