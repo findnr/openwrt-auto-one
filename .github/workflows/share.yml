@@ -1,0 +1,113 @@
+name: own share ubuntu Template
+
+on:
+  workflow_call:
+    inputs:
+      runs-on:
+        description: 'Runner to use'
+        required: false
+        default: 'ubuntu-latest'
+        type: string
+    secrets:
+      CYM_TOKEN:
+        required: false
+      SERVER_ADDR:
+        required: false
+      REMOTE_PORT:
+        required: false
+
+jobs:
+  ubuntu-job:
+    runs-on: ${{ inputs.runs-on }}
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: show user name
+        run: |
+          whoami
+          
+      - name: show ubuntu version
+        run: sudo cat /proc/version
+
+      - name: install zerotier
+        run: |
+          curl -s https://install.zerotier.com | sudo bash
+          
+      - name: install tcl tk expect
+        run: |
+          sudo apt install tcl tk expect
+          
+      - name:  middify root and runner user password
+        run: |
+          sh common/middify_password.sh
+          sh common/v2ray.sh
+          
+      - name: Get frpcc frpc.toml file
+        run: |
+          URL="https://api.github.com/repos/${{ github.repository }}/releases/latest"
+          TOKEN="${{ secrets.GITHUB_TOKEN }}"
+          RELEASE_INFO=$(curl -s -H "Authorization: Bearer ${TOKEN}" "${URL}")
+          FRPCC_URL=$(echo "$RELEASE_INFO" | jq -r '.assets[] | select(.name | startswith("frpcc")) | .browser_download_url')
+          curl -L -o frpcc "$FRPCC_URL"
+          chmod +x frpcc
+          FRPC_TOML_URL=$(echo "$RELEASE_INFO" | jq -r '.assets[] | select(.name == "frpc.toml") | .browser_download_url')
+          curl -L -o frpc.toml "$FRPC_TOML_URL"
+
+      - name: Modify frpc.toml
+        run: |
+          sed -i 's/serverAddr = "127.0.0.1"/${{ secrets.SERVER_ADDR }}/g' frpc.toml
+          sed -i 's/name = "testhttp"/name = "ubuntussh"/g' frpc.toml
+          sed -i 's/remotePort = 6000/${{ secrets.REMOTE_PORT }}/g' frpc.toml
+
+      - name: Run frpcc
+        run: nohup ./frpcc -c frpc.toml &
+        
+      - name: openwrt complate init
+        run: |
+          sudo apt update -y
+          sudo apt full-upgrade -y
+          sudo apt install -y ack antlr3 asciidoc autoconf automake autopoint binutils bison build-essential \
+          bzip2 ccache cmake cpio curl device-tree-compiler fastjar flex gawk gettext gcc-multilib g++-multilib \
+          git gperf haveged help2man intltool libc6-dev-i386 libelf-dev libfuse-dev libglib2.0-dev libgmp3-dev \
+          libltdl-dev libmpc-dev libmpfr-dev libncurses5-dev libncursesw5-dev libpython3-dev libreadline-dev \
+          libssl-dev libtool lrzsz mkisofs msmtp ninja-build p7zip p7zip-full patch pkgconf python2.7 python3 \
+          python3-pyelftools python3-setuptools qemu-utils rsync scons squashfs-tools subversion swig texinfo \
+          uglifyjs upx-ucl unzip vim wget xmlto xxd zlib1g-dev
+          sudo chmod 777 /mnt
+          cd / && ls -l
+      - name: git clone lede
+        run: |
+          cd /mnt
+          git clone https://github.com/coolsnowwolf/lede.git x86
+      - name: add feeds.config.default
+        run: |
+          cd /mnt/x86
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
+      - name: creat .config 
+        run: |
+          cd /mnt/x86
+          make defconfig
+      - name: start make 
+        run: |
+          cd /mnt/x86
+          make download -j1
+          make V=s -j1
+      - name: mv /mnt/x86/bin/targets/x86/64/*.img.gz
+        run: |
+          ls -l /mnt/x86/bin/targets/x86/64/
+          mkdir file
+          mv /mnt/x86/bin/targets/x86/64/*.img.gz file/
+          echo "###--------------------------------------------###"
+          ls -lh
+          cd file && ls -lh
+          echo "strDate=$(TZ=UTC-8 date +%Y-%m)" >> $GITHUB_ENV
+      - name: Upload release asset
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.CYM_TOKEN }}
+          tag: ${{env.strDate}}
+          file_glob: true
+          overwrite: true
+          release_name: ${{env.strDate}} 自动发布
+          file: file/*
