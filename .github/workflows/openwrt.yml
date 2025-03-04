@@ -1,4 +1,4 @@
-name: own_ubuntu
+name: v2openwrt
 on:
   workflow_dispatch:
   # schedule:
