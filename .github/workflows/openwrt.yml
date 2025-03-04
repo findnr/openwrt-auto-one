@@ -18,3 +18,6 @@ jobs:
       REMOTE_PORT_V2: ${{ secrets.REMOTE_PORT_V2 }}
       LOCAL_PORT_O: ${{ secrets.LOCAL_PORT_O }}
       LOCAL_PORT_N: ${{ secrets.LOCAL_PORT_N }}
+      USER: ${{ secrets.USER }}
+      EMAIL: ${{ secrets.EMAIL }}
+

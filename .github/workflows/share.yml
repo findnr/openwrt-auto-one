@@ -23,7 +23,7 @@ on:
         required: false
       USER:
         required: false
-      PWD:
+      EMAIL:
         required: false
 
 jobs:
