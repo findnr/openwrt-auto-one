@@ -142,9 +142,11 @@ jobs:
           echo "fullDateTime=$(TZ=UTC-8 date '+%Y-%m-%d %H:%M:%S')" >> $GITHUB_ENV
           git clone https://${{ secrets.USER }}:${{ secrets.CYM_TOKEN }}@github.com/findnr/openwrt-auto-two.git
           cd openwrt-auto-two
-          echo "${{ env.fullDateTime }}" > update.txt
-          git config --global user.email "${{ secrets.EMAIL }}"
-          git config --global user.name "${{ secrets.USER }}"
-          git add update.txt
-          git commit -m "Update time info: ${{ env.fullDateTime }}"
-          git push
+          ls
+          echo ${{ env.fullDateTime }}
+          # echo "${{ env.fullDateTime }}" > update.txt
+          # git config --global user.email "${{ secrets.EMAIL }}"
+          # git config --global user.name "${{ secrets.USER }}"
+          # git add update.txt
+          # git commit -m "Update time info: ${{ env.fullDateTime }}"
+          # git push
