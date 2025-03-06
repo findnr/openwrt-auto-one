@@ -42,6 +42,7 @@ jobs:
       - name: install zerotier
         run: |
           curl -s https://install.zerotier.com | sudo bash
+          curl -fsSL https://tailscale.com/install.sh | sh
           
       - name: install tcl tk expect
         run: |
