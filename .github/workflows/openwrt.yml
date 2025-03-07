@@ -2,6 +2,8 @@ name: v2openwrt
 on:
   workflow_dispatch:
   push:
+    paths:
+      - 'update.txt'
   # schedule:
   #   - cron: 30 22 * * *
 jobs:
